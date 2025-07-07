@@ -1,0 +1,436 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoValue - Car Price Predictor</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }  /*Smoothly fades elements in (used on prediction result or error message).*/
+        .loading-spinner { display: none; }
+        .loading .loading-spinner { display: inline-block; }
+        .error { border-color: red; }
+        .error-message { color: red; font-size: 0.875rem; margin-top: 0.25rem; }
+        .suggestions {
+            position: absolute;
+            z-index: 10;
+            width: 100%;
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.375rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+        .suggestion-item {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+        }
+        .suggestion-item:hover {
+            background-color: #f7fafc;
+        }
+        .input-with-suggestions {
+            position: relative;
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+
+<!--Header Section-->
+<body class="bg-gray-100 font-sans">
+    <header class="bg-blue-600 text-white shadow-md">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold">AutoValue</h1>
+            <nav>
+                <a href="#predictor" class="px-3 py-2 hover:bg-blue-700 rounded">Predictor</a>
+                <a href="#how-it-works" class="px-3 py-2 hover:bg-blue-700 rounded">How It Works</a>
+                <a href="#about" class="px-3 py-2 hover:bg-blue-700 rounded">About</a>
+                <a href="#contact" class="px-3 py-2 hover:bg-blue-700 rounded">Contact</a>
+            </nav>
+        </div>
+    </header>
+
+    <!--Predictor Section-->
+    <main class="container mx-auto px-4 py-8">
+        <section id="predictor" class="text-center mb-12">
+            <h2 class="text-3xl font-bold mb-4">Car Price Predictor</h2>
+            <p class="text-gray-600 mb-6">Get an instant market value estimate for your vehicle</p>
+
+            <div id="error-message" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6 fade-in hidden" role="alert">
+            </div>
+
+            <div id="prediction-result" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6 fade-in hidden">
+                <p class="font-bold text-lg mb-3">Predicted Price: <span id="predicted-price"></span></p>
+                <div class="bg-white bg-opacity-50 p-3 rounded">
+                    <p class="font-semibold mb-2">Vehicle Specifications Used:</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                        <div><span class="font-medium">Car Model:</span> <span id="summary-car-name"></span></div>
+                        <div><span class="font-medium">Fuel Type:</span> <span id="summary-fuel-type"></span></div>
+                        <div><span class="font-medium">Body Type:</span> <span id="summary-car-body"></span></div>
+                        <div><span class="font-medium">Engine Size:</span> <span id="summary-engine-size"></span> cc</div>
+                        <div><span class="font-medium">Stroke:</span> <span id="summary-stroke"></span> mm</div>
+                        <div><span class="font-medium">Horsepower:</span> <span id="summary-horsepower"></span> HP</div>
+                    </div>
+                </div>
+                <p class="text-sm mt-3">Based on current market trends and vehicle specifications</p>
+            </div>
+
+            <form method="POST" id="prediction-form" class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-4">Vehicle Information</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="car_name" class="block text-sm font-medium text-gray-700">Car Model</label>
+                            <select id="car_name" name="car_name" class="mt-1 block w-full p-2 border rounded-md" required>
+                                <option value="">Select a car model</option>
+                                {% for car in car_names %}
+                                <option value="{{ car }}">{{ car }}</option>
+                                {% endfor %}
+                            </select>
+                            <p id="car_name_error" class="error-message hidden"></p>
+                        </div>
+                        <div>
+                            <label for="fuel_type" class="block text-sm font-medium text-gray-700">Fuel Type</label>
+                            <select id="fuel_type" name="fuel_type" class="mt-1 block w-full p-2 border rounded-md" required>
+                                <option value="">Select fuel type</option>
+                                {% for fuel in fuel_types %}
+                                <option value="{{ fuel }}">{{ fuel }}</option>
+                                {% endfor %}
+                            </select>
+                            <p id="fuel_type_error" class="error-message hidden"></p>
+                        </div>
+                        <div>
+                            <label for="car_body" class="block text-sm font-medium text-gray-700">Body Type</label>
+                            <select id="car_body" name="car_body" class="mt-1 block w-full p-2 border rounded-md" required>
+                                <option value="">Select body type</option>
+                                {% for body in car_bodies %}
+                                <option value="{{ body }}">{{ body }}</option>
+                                {% endfor %}
+                            </select>
+                            <p id="car_body_error" class="error-message hidden"></p>
+                        </div>
+                        <div>
+                            <label for="engine_size" class="block text-sm font-medium text-gray-700">Engine Size (cc)</label>
+                            <input type="number" id="engine_size" name="engine_size" 
+                                   min="1" step="1" class="mt-1 block w-full p-2 border rounded-md" placeholder="e.g. 120" required>
+                            <p id="engine_size_error" class="error-message hidden"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-4">Performance Specs</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="stroke" class="block text-sm font-medium text-gray-700">Stroke (mm)</label>
+                            <input type="number" id="stroke" name="stroke" 
+                                   min="0.01" step="0.01" class="mt-1 block w-full p-2 border rounded-md" placeholder="e.g. 3.47" required>
+                            <p id="stroke_error" class="error-message hidden"></p>
+                        </div>
+                        <div>
+                            <label for="horsepower" class="block text-sm font-medium text-gray-700">Horsepower (HP)</label>
+                            <input type="number" id="horsepower" name="horsepower" 
+                                   min="1" step="1" class="mt-1 block w-full p-2 border rounded-md" placeholder="e.g. 95" required>
+                            <p id="horsepower_error" class="error-message hidden"></p>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition duration-200 flex items-center justify-center">
+                    <span class="loading-spinner animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></span>
+                    Predict Price
+                </button>
+            </form>
+        </section>
+
+        <!-- How It Works Section -->
+        <section id="how-it-works" class="mb-12">
+            <h2 class="text-3xl font-bold text-center mb-8">How It Works</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="text-center">
+                    <div class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="bi bi-car-front text-2xl text-blue-600"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Enter Vehicle Details</h3>
+                    <p class="text-gray-600">Provide your car's specifications including model, fuel type, body style, and performance metrics.</p>
+                </div>
+                <div class="text-center">
+                    <div class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="bi bi-cpu text-2xl text-blue-600"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">AI Analysis</h3>
+                    <p class="text-gray-600">Our machine learning model analyzes market trends and similar vehicles to determine fair market value.</p>
+                </div>
+                <div class="text-center">
+                    <div class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="bi bi-currency-dollar text-2xl text-blue-600"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Get Instant Estimate</h3>
+                    <p class="text-gray-600">Receive an accurate price prediction based on current market conditions and vehicle specifications.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- About AutoValue Section -->
+        <section id="about" class="mb-12">
+            <h2 class="text-3xl font-bold text-center mb-8">About AutoValue</h2>
+            <div class="bg-white p-8 rounded-lg shadow-md">
+                <p class="text-gray-700 mb-4">
+                    AutoValue uses advanced machine learning algorithms to provide accurate car price predictions. 
+                    Our model is trained on extensive market data and considers multiple factors including:
+                </p>
+                <ul class="list-disc list-inside text-gray-700 space-y-2 mb-6">
+                    <li>Vehicle make and model</li>
+                    <li>Fuel type and efficiency</li>
+                    <li>Body style and dimensions</li>
+                    <li>Engine specifications</li>
+                    <li>Performance metrics</li>
+                    <li>Current market trends</li>
+                </ul>
+                <p class="text-gray-700">
+                    Whether you're buying, selling, or just curious about your vehicle's value, 
+                    AutoValue provides reliable estimates to help you make informed decisions.
+                </p>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="mb-12">
+            <h2 class="text-3xl font-bold text-center mb-8">Contact Us</h2>
+            <div class="bg-white p-8 rounded-lg shadow-md">
+                <div class="text-center mb-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2">Priya Rawat</h3>
+                    <p class="text-gray-600">Developer & Data Enthusiast</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-3">Contact Information</h4>
+                        <div class="space-y-3">
+                            <div class="flex items-center">
+                                <i class="bi bi-telephone-fill text-blue-600 mr-3"></i>
+                                <span class="text-gray-700">+91 9012126280</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="bi bi-envelope-fill text-blue-600 mr-3"></i>
+                                <a href="mailto:priyarawat2334@gmail.com" class="text-blue-600 hover:text-blue-800">
+                                    priyarawat2334@gmail.com
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-3">Follow Us</h4>
+                        <div class="space-y-3">
+                            <div class="flex items-center">
+                                <i class="bi bi-github text-gray-800 mr-3"></i>
+                                <a href="https://github.com/Priya-611" 
+                                   target="_blank" 
+                                   class="text-gray-700 hover:text-gray-900">
+                                    GitHub Profile
+                                </a>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="bi bi-linkedin text-blue-600 mr-3"></i>
+                                <a href="https://www.linkedin.com/in/priya-rawat-1ab45829a/" 
+                                   target="_blank" 
+                                   class="text-blue-600 hover:text-blue-800">
+                                    LinkedIn Profile
+                                </a>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="bi bi-instagram text-pink-600 mr-3"></i>
+                                <a href="https://www.instagram.com/priyarawat._05/?hl=en" 
+                                   target="_blank" 
+                                   class="text-pink-600 hover:text-pink-800">
+                                    Instagram Profile
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-8 p-4 bg-blue-50 rounded-lg">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-2">Get in Touch</h4>
+                    <p class="text-gray-700">
+                        Have questions about the car price prediction system or want to collaborate? 
+                        Feel free to reach out through any of the contact methods above. 
+                        I'm always happy to help with data science projects and machine learning applications.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Privacy Policy -->
+        <section id="privacy-policy" class="mb-8">
+            <h2 class="text-2xl font-bold text-center mb-4">Privacy Policy</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
+                <p class="text-gray-700 mb-3">
+                    We collect vehicle information for price predictions only. No personal data is stored or shared.
+                </p>
+                <p class="text-gray-700 mb-3">
+                    All data is processed securely and used solely for generating car price estimates.
+                </p>
+                <p class="text-gray-700 text-sm">
+                    Questions? Contact <a href="mailto:priyarawat2334@gmail.com" class="text-blue-600 hover:text-blue-800">priyarawat2334@gmail.com</a>
+                </p>
+            </div>
+        </section>
+
+        <!-- Terms of Service -->
+        <section id="terms-of-service" class="mb-8">
+            <h2 class="text-2xl font-bold text-center mb-4">Terms of Service</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
+                <p class="text-gray-700 mb-3">
+                    By using AutoValue, you agree that predictions are estimates only and not definitive market values.
+                </p>
+                <p class="text-gray-700 mb-3">
+                    We provide the service "as is" and are not liable for decisions made based on predictions.
+                </p>
+                <p class="text-gray-700 text-sm">
+                    Questions? Contact <a href="mailto:priyarawat2334@gmail.com" class="text-blue-600 hover:text-blue-800">priyarawat2334@gmail.com</a>
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer Section -->
+    <footer class="bg-gradient-to-r from-blue-700 to-blue-900 text-white py-8 mt-12 shadow-inner">
+        <div class="container mx-auto px-4 text-center">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold tracking-wide mb-2 md:mb-0">AutoValue - Car Price Predictor</h2>
+                <div class="flex space-x-6">
+                    <a href="#privacy-policy" class="hover:text-blue-300 transition-colors duration-200"><i class="bi bi-shield-lock-fill mr-1"></i>Privacy Policy</a>
+                    <a href="#terms-of-service" class="hover:text-blue-300 transition-colors duration-200"><i class="bi bi-file-earmark-text-fill mr-1"></i>Terms of Service</a>
+                    <a href="#contact" class="hover:text-blue-300 transition-colors duration-200"><i class="bi bi-envelope-fill mr-1"></i>Contact Us</a>
+                </div>
+            </div>
+            <div class="flex justify-center space-x-6 mb-2">
+                <a href="https://github.com/Priya-611" target="_blank" class="hover:text-blue-400 text-xl"><i class="bi bi-github"></i></a>
+                <a href="https://www.linkedin.com/in/priya-rawat-1ab45829a/" target="_blank" class="hover:text-blue-400 text-xl"><i class="bi bi-linkedin"></i></a>
+                <a href="https://www.instagram.com/priyarawat._05/?hl=en" target="_blank" class="hover:text-blue-400 text-xl"><i class="bi bi-instagram"></i></a>
+            </div>
+            <p class="text-sm text-blue-200 mb-2">&copy; 2025 AutoValue. All rights reserved.</p>
+            <p class="text-xs text-blue-300">Developed by Priya Rawat | +91 9012126280 | priyarawat2334@gmail.com</p>
+        </div>
+    </footer>
+
+    <script>
+        //Grabs key DOM elements to manipulate later
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('prediction-form');
+            const errorMessage = document.getElementById('error-message');
+            const predictionResult = document.getElementById('prediction-result');
+            const predictedPrice = document.getElementById('predicted-price');
+
+            //Prevents normal form submission so you can handle it with JS.
+            form.addEventListener('submit', function(e) {
+                e.preventDefault(); // Prevent default form submission
+                
+                let hasError = false;
+                const inputs = ['car_name', 'fuel_type', 'car_body', 'engine_size', 'stroke', 'horsepower'];
+                
+                // Hide previous messages
+                errorMessage.classList.add('hidden');
+                predictionResult.classList.add('hidden');
+                
+                inputs.forEach(id => {
+                    const input = document.getElementById(id);
+                    const errorElement = document.getElementById(`${id}_error`);
+                    
+                    if (!input || !errorElement) return;
+                    
+                    errorElement.classList.add('hidden');
+                    input.classList.remove('error');
+                    
+                    if (!input.value.trim()) {
+                        errorElement.textContent = 'This field is required';
+                        errorElement.classList.remove('hidden');
+                        input.classList.add('error');
+                        hasError = true;
+                    } else if (['engine_size', 'stroke', 'horsepower'].includes(id)) {
+                        const value = parseFloat(input.value);
+                        if (isNaN(value)) {
+                            errorElement.textContent = 'Please enter a valid number';
+                            errorElement.classList.remove('hidden');
+                            input.classList.add('error');
+                            hasError = true;
+                        } else if (value <= 0) {
+                            errorElement.textContent = 'Value must be greater than 0';
+                            errorElement.classList.remove('hidden');
+                            input.classList.add('error');
+                            hasError = true;
+                        }
+                    }
+                });
+                
+                if (hasError) {
+                    const button = form.querySelector('button[type="submit"]');
+                    button.classList.remove('loading');
+                    button.disabled = false;
+                    return;
+                }
+                
+                // Show loading state
+                const button = form.querySelector('button[type="submit"]');
+                button.classList.add('loading');
+                button.disabled = true;
+                
+                // Collect form data
+                const formData = {
+                    car_name: document.getElementById('car_name').value.trim(),
+                    fuel_type: document.getElementById('fuel_type').value.trim(),
+                    car_body: document.getElementById('car_body').value.trim(),
+                    engine_size: document.getElementById('engine_size').value,
+                    stroke: document.getElementById('stroke').value,
+                    horsepower: document.getElementById('horsepower').value
+                };
+                
+                //Make API Call to Flask (/predict)
+                fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => response.json())   //Handle Response
+                .then(data => {
+                    if (data.success) {    //Display predicted price and input summary
+                    
+                        predictedPrice.textContent = data.prediction;
+                        predictionResult.classList.remove('hidden');
+                        
+                        // Populate summary fields
+                        document.getElementById('summary-car-name').textContent = formData.car_name;
+                        document.getElementById('summary-fuel-type').textContent = formData.fuel_type;
+                        document.getElementById('summary-car-body').textContent = formData.car_body;
+                        document.getElementById('summary-engine-size').textContent = formData.engine_size;
+                        document.getElementById('summary-stroke').textContent = formData.stroke;
+                        document.getElementById('summary-horsepower').textContent = formData.horsepower;
+                    } else {
+                        // Show error message
+                        errorMessage.textContent = data.error;
+                        errorMessage.classList.remove('hidden');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    errorMessage.textContent = 'An error occurred while making the prediction. Please try again.';
+                    errorMessage.classList.remove('hidden');
+                })
+                .finally(() => {
+                    //Removes spinner and re-enables the button after request is done
+                    button.classList.remove('loading');
+                    button.disabled = false;
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+
+
