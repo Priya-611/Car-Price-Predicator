@@ -45,12 +45,19 @@ We used this dataset to **train a Random Forest Regressor model** for price pred
 ## Project Structure
 
 ├── app.py `Flask backend`
+
 ├── task1.py `ML logic (train, encode, predict)`
+
 ├── model.pkl `Trained model`
+
 ├── encoders.pkl `LabelEncoders`
+
 ├── CarPrice_Assignment.csv `Source dataset from Kaggle`
+
 ├── requirements.txt `Python dependencies`
+
 ├── templates/
+
 │ └── index.html `Frontend UI`
 
 ---
