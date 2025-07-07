@@ -15,6 +15,35 @@ We used this dataset to **train a Random Forest Regressor model** for price pred
 
 ---
 
+## Project Background
+
+This project began with an initial script named `car_prediction.py`, where:
+
+- The dataset from [Kaggle](https://www.kaggle.com/datasets/hellbuoy/car-price-prediction) was loaded and explored
+- A **Random Forest Regressor** was trained using features like:
+  - Car Name
+  - Fuel Type
+  - Car Body
+  - Engine Size
+  - Stroke
+  - Horsepower
+- **Label encoding** was used to convert categorical values to numerical format
+- The model was evaluated using:
+  - Mean Squared Error (MSE)
+  - R² Score
+- Predictions were made using **manual user input from the console**
+- Basic EDA like heatmaps were created to check feature correlation
+
+Later, the logic from `car_prediction.py` was modularized into `task1.py` to enable:
+
+- Code reusability
+- Integration with a Flask web app (`app.py`)
+- Web-based input via `index.html` instead of terminal-based interaction
+
+This evolution allowed the project to grow from a script to a fully functional **AI-powered car price prediction web app**.
+
+---
+
 ## Project Workflow
 
 1. Load and clean the Kaggle dataset
@@ -46,6 +75,8 @@ We used this dataset to **train a Random Forest Regressor model** for price pred
 
 ├── app.py `Flask backend`
 
+├── car_prediction.py `initial script where model was trained and tested with console input`
+
 ├── task1.py `ML logic (train, encode, predict)`
 
 ├── model.pkl `Trained model`
@@ -67,6 +98,7 @@ We used this dataset to **train a Random Forest Regressor model** for price pred
 1. **Download the project files**
    - Make sure you have these files in one folder:
      - `app.py`
+     - `car_prediction.py`
      - `task1.py`
      - `model.pkl`
      - `encoders.pkl`
