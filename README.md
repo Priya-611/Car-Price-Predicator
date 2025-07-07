@@ -135,4 +135,3 @@ This evolution allowed the project to grow from a script to a fully functional *
    - Fill in car details and click “Predict Price” to see the estimated price.
 
 
-
